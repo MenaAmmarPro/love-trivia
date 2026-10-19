@@ -541,12 +541,104 @@
     if (!hasDom()) return;
     renderStats();
     renderCategoryOptions();
+    renderBank();
     var start = $("start-btn");
     if (start) start.addEventListener("click", startGame);
     var next = $("next-btn");
     if (next) next.addEventListener("click", nextQuestion);
     var again = $("again-btn");
     if (again) again.addEventListener("click", startGame);
+    var form = $("bank-form");
+    if (form) form.addEventListener("submit", handleAddQuestion);
+    var reset = $("bank-reset");
+    if (reset) reset.addEventListener("click", handleBankReset);
+  }
+
+  /* ---------- editable question bank ---------- */
+
+  function renderBank() {
+    var list = $("bank-list");
+    setText($("bank-count"), bankQuestions(state).length);
+    if (!list) return;
+    list.innerHTML = "";
+    var items = bankQuestions(state);
+    if (!items.length) {
+      var empty = document.createElement("li");
+      empty.className = "bank-empty";
+      empty.textContent = "No questions yet \u2014 add one below.";
+      list.appendChild(empty);
+      return;
+    }
+    items.forEach(function (item) {
+      var li = document.createElement("li");
+      li.className = "bank-item";
+
+      var body = document.createElement("div");
+      var q = document.createElement("p");
+      q.className = "bank-q";
+      q.textContent = item.q;
+      var meta = document.createElement("p");
+      meta.className = "bank-meta";
+      meta.textContent = item.category + " \u00b7 answer: " + item.options[item.answer];
+      body.appendChild(q);
+      body.appendChild(meta);
+
+      var actions = document.createElement("div");
+      actions.className = "bank-actions";
+      var del = document.createElement("button");
+      del.type = "button";
+      del.title = "Delete this question";
+      del.setAttribute("aria-label", "Delete question");
+      del.textContent = "\u00d7";
+      del.addEventListener("click", function () {
+        state = save(removeQuestion(state, item.id));
+        afterBankChange();
+      });
+      actions.appendChild(del);
+
+      li.appendChild(body);
+      li.appendChild(actions);
+      list.appendChild(li);
+    });
+  }
+
+  function afterBankChange() {
+    renderBank();
+    renderCategoryOptions();
+    renderStats();
+  }
+
+  function handleAddQuestion(event) {
+    if (event && typeof event.preventDefault === "function") event.preventDefault();
+    var opts = ["bq-o0", "bq-o1", "bq-o2", "bq-o3"].map(function (id) {
+      var el = $(id);
+      return el ? el.value : "";
+    });
+    var answerEl = $("bq-answer");
+    var catEl = $("bq-category");
+    var textEl = $("bq-text");
+    var raw = {
+      id: makeId("q"),
+      category: catEl ? catEl.value : "Us",
+      q: textEl ? textEl.value : "",
+      options: opts,
+      answer: answerEl ? parseInt(answerEl.value, 10) : 0
+    };
+    if (!sanitizeQuestion(raw)) {
+      setText($("bank-note"), "Please fill every box (four options and a question).");
+      return;
+    }
+    state = save(addQuestion(state, raw));
+    var form = $("bank-form");
+    if (form && typeof form.reset === "function") form.reset();
+    setText($("bank-note"), "Added \u2665");
+    afterBankChange();
+  }
+
+  function handleBankReset() {
+    state = save(resetBank(state));
+    setText($("bank-note"), "Back to the originals \u2665");
+    afterBankChange();
   }
 
   /* ---------- export ---------- */
@@ -580,6 +672,9 @@
     load: load,
     save: save,
     renderStats: renderStats,
+    renderBank: renderBank,
+    handleAddQuestion: handleAddQuestion,
+    handleBankReset: handleBankReset,
     buildQueue: buildQueue,
     startGame: startGame,
     nextQuestion: nextQuestion,
