@@ -1,0 +1,13 @@
+{
+  "name": "How well do you know us? — love-trivia",
+  "short_name": "Our Trivia",
+  "description": "A little quiz for Mena: four options, a timer, and a score to share.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#090b20",
+  "theme_color": "#090b20",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
