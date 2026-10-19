@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How well do you know us? — love-trivia</title>
+  <meta name="description" content="A little quiz for Mena: how well do you know us? Four options, a timer, and a score to share back with Ammar.">
+  <meta property="og:title" content="How well do you know us? — love-trivia">
+  <meta property="og:description" content="A little quiz for Mena: how well do you know us?">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#090b20">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon.svg">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body data-page="trivia">
+  <canvas id="starfield" aria-hidden="true"></canvas>
+
+  <header class="site-header">
+    <a class="brand" href="https://menaammarpro.github.io/love-trivia/">&#9829; Mena &amp; Ammar</a>
+    <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false">Menu</button>
+    <nav class="nav-links" aria-label="Main">
+      <a href="https://menaammarpro.github.io/">All projects</a>
+      <div class="nav-more">
+        <button class="nav-more-toggle" type="button" aria-haspopup="true" aria-expanded="false">More <span class="caret" aria-hidden="true">&#9662;</span></button>
+        <div class="nav-more-menu" role="menu">
+          <a role="menuitem" href="https://menaammarpro.github.io/loveformymena/">Letters</a>
+          <a role="menuitem" href="https://menaammarpro.github.io/love-reasons/">Reasons</a>
+          <a role="menuitem" href="https://menaammarpro.github.io/love-arcade/">Arcade</a>
+          <a role="menuitem" href="https://menaammarpro.github.io/love-countdown/">Countdown</a>
+          <a role="menuitem" href="https://menaammarpro.github.io/love-song/">Our song</a>
+          <a role="menuitem" href="https://menaammarpro.github.io/love-starmap/">Star map</a>
+          <a role="menuitem" href="https://menaammarpro.github.io/love-diary/">Diary</a>
+        </div>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="Toggle color theme">Theme</button>
+      <a class="github-link" href="https://github.com/MenaAmmarPro/love-trivia" target="_blank" rel="noopener noreferrer" aria-label="View source on GitHub" title="View source on GitHub">
+        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" focusable="false" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+        </svg>GitHub
+      </a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">A little quiz, just for you</p>
+      <h1>How well do you know <span>us</span>?</h1>
+      <p class="subtitle">Twelve little questions about you and me. Four answers each,
+        a gentle timer, and a score to send back to Ammar.</p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="#game">Start the quiz</a>
+        <a class="button button-ghost" href="#bank">Edit the questions</a>
+      </div>
+    </section>
+
+    <p id="deep-note" class="sent-note" hidden></p>
+
+    <section class="stats-row">
+      <div class="stat-card">
+        <span class="stat-num" id="stat-best">&mdash;</span>
+        <span class="stat-label">your best</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-plays">0</span>
+        <span class="stat-label">plays</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-num" id="stat-questions">0</span>
+        <span class="stat-label">questions</span>
+      </div>
+    </section>
+
+    <section id="game" class="panel quiz-panel">
+      <div id="start-screen">
+        <h2>Ready when you are</h2>
+        <p id="start-hint">Pick a category and how many questions, then press start.</p>
+        <div class="quiz-setup">
+          <label class="field">
+            <span>Category</span>
+            <select id="cat-select"><option value="all">Everything</option></select>
+          </label>
+          <label class="field">
+            <span>Questions</span>
+            <select id="count-select">
+              <option value="5">5</option>
+              <option value="8">8</option>
+              <option value="12" selected>12</option>
+              <option value="0">All of them</option>
+            </select>
+          </label>
+        </div>
+        <button id="start-btn" class="button button-primary" type="button">Start the quiz &#9829;</button>
+      </div>
+
+      <div id="q-screen" hidden>
+        <p class="quiz-progress" id="progress">&nbsp;</p>
+        <div class="timer">
+          <div id="timer-fill" class="timer-fill"></div>
+        </div>
+        <p class="timer-text" id="timer-text">&nbsp;</p>
+        <h2 class="quiz-question" id="q-text">&nbsp;</h2>
+        <div class="quiz-options" id="q-options"></div>
+        <p class="quiz-feedback" id="feedback">&nbsp;</p>
+        <button id="next-btn" class="button button-primary quiz-next" type="button" hidden>Next &#8594;</button>
+      </div>
+
+      <div id="result-screen" hidden>
+        <p class="eyebrow">The verdict</p>
+        <p class="result-score" id="result-score">0 / 0</p>
+        <p class="result-pct" id="result-pct">&nbsp;</p>
+        <p class="result-msg" id="result-msg">&nbsp;</p>
+        <div class="result-actions">
+          <button id="again-btn" class="button button-primary" type="button">Play again</button>
+          <button id="share-btn" class="button button-ghost" type="button">Share my score</button>
+          <a class="button button-ghost" href="#bank">Edit questions</a>
+        </div>
+        <p class="share-note" id="share-note">&nbsp;</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Challenge Ammar</h2>
+      <p>Copy a challenge link. Whoever opens it sees your score and gets the
+        same quiz to beat it.</p>
+      <button id="challenge-btn" class="button button-ghost" type="button">Copy a challenge link</button>
+      <p class="share-note" id="challenge-note">&nbsp;</p>
+    </section>
+
+    <section id="bank" class="panel bank-panel">
+      <h2>Our questions <span id="bank-count" class="bank-count">0</span></h2>
+      <p>These are ours to change &mdash; rewrite them, add new ones, or press reset
+        to bring back the originals.</p>
+      <ul id="bank-list" class="bank-list"></ul>
+
+      <form id="bank-form" class="bank-form" autocomplete="off">
+        <h3>Add a question</h3>
+        <label class="field">
+          <span>Category</span>
+          <input id="bq-category" type="text" maxlength="24" placeholder="Us" required>
+        </label>
+        <label class="field">
+          <span>Question</span>
+          <input id="bq-text" type="text" maxlength="140" placeholder="What did we meet on?" required>
+        </label>
+        <label class="field">
+          <span>Option 1</span>
+          <input id="bq-o0" type="text" maxlength="60" required>
+        </label>
+        <label class="field">
+          <span>Option 2</span>
+          <input id="bq-o1" type="text" maxlength="60" required>
+        </label>
+        <label class="field">
+          <span>Option 3</span>
+          <input id="bq-o2" type="text" maxlength="60" required>
+        </label>
+        <label class="field">
+          <span>Option 4</span>
+          <input id="bq-o3" type="text" maxlength="60" required>
+        </label>
+        <label class="field">
+          <span>Correct answer</span>
+          <select id="bq-answer">
+            <option value="0">Option 1</option>
+            <option value="1">Option 2</option>
+            <option value="2">Option 3</option>
+            <option value="3">Option 4</option>
+          </select>
+        </label>
+        <div class="bank-form-actions">
+          <button class="button button-primary" type="submit">Add question</button>
+          <button id="bank-reset" class="button button-ghost" type="button">Reset to originals</button>
+        </div>
+        <p class="bank-note" id="bank-note">&nbsp;</p>
+      </form>
+    </section>
+
+    <section class="panel info-panel">
+      <h2>How to play</h2>
+      <ul>
+        <li><strong>Answer</strong> &mdash; four options, one right answer. Tap it.</li>
+        <li><strong>Beat the clock</strong> &mdash; about twenty seconds a question; the bar turns red near the end.</li>
+        <li><strong>Share</strong> &mdash; send your score back as a challenge link.</li>
+        <li><strong>Make it ours</strong> &mdash; the question bank below is yours to edit any time.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Made with love, just for you <span aria-hidden="true">&#9829;</span></p>
+    <p class="footer-small">Ammar &rarr; Mena &middot; Karachi &rarr; Bucharest</p>
+  </footer>
+
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top" hidden>&#8679;</button>
+  <script src="main.js" defer></script>
+  <script src="effects.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>
