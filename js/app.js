@@ -552,6 +552,11 @@
     if (form) form.addEventListener("submit", handleAddQuestion);
     var reset = $("bank-reset");
     if (reset) reset.addEventListener("click", handleBankReset);
+    var share = $("share-btn");
+    if (share) share.addEventListener("click", handleShare);
+    var challenge = $("challenge-btn");
+    if (challenge) challenge.addEventListener("click", handleChallenge);
+    applyDeepLink();
   }
 
   /* ---------- editable question bank ---------- */
@@ -641,6 +646,69 @@
     afterBankChange();
   }
 
+  /* ---------- sharing + deep link ---------- */
+
+  function pageBase() {
+    try {
+      if (root.location && root.location.origin) {
+        return root.location.origin + root.location.pathname;
+      }
+    } catch (e) {
+      /* fall through */
+    }
+    return "";
+  }
+
+  function copyText(text, noteEl) {
+    function done() {
+      setText(noteEl, "Copied \u2665 \u2014 go send it.");
+    }
+    function fallback() {
+      setText(noteEl, text);
+    }
+    try {
+      if (root.navigator && root.navigator.clipboard && root.navigator.clipboard.writeText) {
+        root.navigator.clipboard.writeText(text).then(done, fallback);
+        return;
+      }
+    } catch (e) {
+      /* fall through */
+    }
+    fallback();
+  }
+
+  function handleShare() {
+    var url = challengeUrl(pageBase(), lastResult.score, lastResult.total);
+    copyText(challengeText(lastResult.score, lastResult.total, url), $("share-note"));
+  }
+
+  function handleChallenge() {
+    var best = state.best == null ? 0 : state.best;
+    var bestTotal = state.bestTotal == null ? bankQuestions(state).length : state.bestTotal;
+    var url = challengeUrl(pageBase(), best, bestTotal);
+    copyText(challengeText(best, bestTotal, url), $("challenge-note"));
+  }
+
+  function applyDeepLink() {
+    var search = "";
+    try {
+      search = root.location ? root.location.search : "";
+    } catch (e) {
+      search = "";
+    }
+    var shared = parseShare(search);
+    if (!shared) return null;
+    var note = $("deep-note");
+    var score = shared.score == null ? 0 : shared.score;
+    var total = shared.total == null ? bankQuestions(state).length : shared.total;
+    if (note) {
+      note.textContent = "A challenge arrived: " + score + " / " + total + " \u2665 \u2014 can you beat it? Press start.";
+      note.hidden = false;
+    }
+    setText($("start-hint"), "Someone scored " + score + "/" + total + " \u2014 beat it \u2665");
+    return shared;
+  }
+
   /* ---------- export ---------- */
 
   var api = {
@@ -675,6 +743,9 @@
     renderBank: renderBank,
     handleAddQuestion: handleAddQuestion,
     handleBankReset: handleBankReset,
+    handleShare: handleShare,
+    handleChallenge: handleChallenge,
+    applyDeepLink: applyDeepLink,
     buildQueue: buildQueue,
     startGame: startGame,
     nextQuestion: nextQuestion,
