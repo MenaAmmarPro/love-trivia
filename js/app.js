@@ -349,6 +349,206 @@
     return state;
   }
 
+  /* ---------- browser wiring (guarded: the Node harness has no real DOM) ---------- */
+
+  var state = load();
+  var game = null;
+  var timerId = null;
+  var lastResult = { score: 0, total: 0 };
+
+  function hasDom() {
+    return typeof document !== "undefined" && document && typeof document.getElementById === "function";
+  }
+
+  function $(id) {
+    return hasDom() ? document.getElementById(id) : null;
+  }
+
+  function setText(el, text) {
+    if (el) el.textContent = String(text);
+  }
+
+  function showEl(el, on) {
+    if (el) el.hidden = !on;
+  }
+
+  function renderStats() {
+    var total = bankQuestions(state).length;
+    setText($("stat-best"), state.best == null ? "\u2014" : state.best + " / " + state.bestTotal);
+    setText($("stat-plays"), state.plays | 0);
+    setText($("stat-questions"), total);
+  }
+
+  function renderCategoryOptions() {
+    var select = $("cat-select");
+    if (!select) return;
+    var cats = categories(bankQuestions(state));
+    select.innerHTML = "";
+    var all = document.createElement("option");
+    all.value = "all";
+    all.textContent = "Everything";
+    select.appendChild(all);
+    cats.forEach(function (name) {
+      var opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      select.appendChild(opt);
+    });
+  }
+
+  function buildQueue() {
+    var catEl = $("cat-select");
+    var countEl = $("count-select");
+    var pool = filterByCategory(bankQuestions(state), catEl ? catEl.value : "all");
+    var count = countEl ? parseInt(countEl.value, 10) : 12;
+    if (!pool.length) pool = bankQuestions(state);
+    return pickQuestions(pool, count);
+  }
+
+  function startGame() {
+    var queue = buildQueue();
+    if (!queue.length) return;
+    game = { queue: queue, index: 0, score: 0, answered: false, startedAt: 0, total: queue.length };
+    showEl($("start-screen"), false);
+    showEl($("result-screen"), false);
+    showEl($("q-screen"), true);
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    var item = game.queue[game.index];
+    game.answered = false;
+    game.startedAt = Date.now();
+    var progress = $("progress");
+    if (progress) progress.textContent = "Question " + (game.index + 1) + " of " + game.total;
+    setText($("q-text"), item.q);
+    setText($("feedback"), "\u00a0");
+    showEl($("next-btn"), false);
+
+    var box = $("q-options");
+    if (!box) return;
+    box.innerHTML = "";
+    item.options.forEach(function (text, i) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "quiz-option";
+      btn.dataset.index = String(i);
+      btn.textContent = text;
+      btn.addEventListener("click", function () {
+        answerQuestion(i);
+      });
+      box.appendChild(btn);
+    });
+
+    startTimer();
+  }
+
+  function startTimer() {
+    stopTimer();
+    tick();
+    timerId = setInterval(tick, 100);
+  }
+
+  function stopTimer() {
+    if (timerId) clearInterval(timerId);
+    timerId = null;
+  }
+
+  function tick() {
+    if (!game || game.answered) return;
+    var left = timeLeft(game.startedAt, QUESTION_LIMIT_MS, Date.now());
+    var pct = (left / QUESTION_LIMIT_MS) * 100;
+    var fill = $("timer-fill");
+    if (fill) {
+      fill.style.width = (pct > 0 ? pct : 0) + "%";
+      if (pct <= 30) fill.classList.add("is-low");
+      else fill.classList.remove("is-low");
+    }
+    setText($("timer-text"), Math.ceil(left / 1000) + "s left");
+    if (left <= 0) answerQuestion(-1);
+  }
+
+  function setOptionState(chosen) {
+    var box = $("q-options");
+    if (!box) return;
+    var item = game.queue[game.index];
+    var buttons = box.querySelectorAll(".quiz-option");
+    for (var i = 0; i < buttons.length; i += 1) {
+      var btn = buttons[i];
+      var idx = parseInt(btn.dataset.index, 10);
+      btn.disabled = true;
+      if (idx === item.answer) btn.classList.add("is-right");
+      else if (idx === chosen) btn.classList.add("is-wrong");
+    }
+  }
+
+  function answerQuestion(chosen) {
+    if (!game || game.answered) return;
+    game.answered = true;
+    stopTimer();
+    var item = game.queue[game.index];
+    var correct = chosen === item.answer;
+    if (correct) game.score += 1;
+    setOptionState(chosen);
+    var fill = $("timer-fill");
+    if (fill) fill.style.width = "0%";
+    setText($("timer-text"), "\u00a0");
+    setText($("feedback"), correct ? "Yes \u2014 that's us \u2665" : (chosen === -1 ? "Time's up \u2014 it was \"" + item.options[item.answer] + "\"" : "Almost \u2014 it was \"" + item.options[item.answer] + "\""));
+    var next = $("next-btn");
+    if (next) {
+      next.textContent = game.index + 1 >= game.total ? "See my result \u2665" : "Next \u2192";
+      next.hidden = false;
+    }
+  }
+
+  function nextQuestion() {
+    if (!game) return;
+    if (game.index + 1 >= game.total) {
+      finishGame();
+      return;
+    }
+    game.index += 1;
+    renderQuestion();
+  }
+
+  function finishGame() {
+    stopTimer();
+    var score = game.score;
+    var total = game.total;
+    lastResult = { score: score, total: total };
+    state = recordScore(state, score, total);
+    save(state);
+    renderStats();
+    showEl($("q-screen"), false);
+    showEl($("start-screen"), false);
+    showEl($("result-screen"), true);
+    setText($("result-score"), score + " / " + total);
+    var pct = scorePct(score, total);
+    setText($("result-pct"), pct + "% \u2665");
+    setText($("result-msg"), scoreLabel(pct));
+    setText($("share-note"), "\u00a0");
+  }
+
+  function backToStart() {
+    stopTimer();
+    game = null;
+    showEl($("result-screen"), false);
+    showEl($("q-screen"), false);
+    showEl($("start-screen"), true);
+  }
+
+  function boot() {
+    if (!hasDom()) return;
+    renderStats();
+    renderCategoryOptions();
+    var start = $("start-btn");
+    if (start) start.addEventListener("click", startGame);
+    var next = $("next-btn");
+    if (next) next.addEventListener("click", nextQuestion);
+    var again = $("again-btn");
+    if (again) again.addEventListener("click", startGame);
+  }
+
   /* ---------- export ---------- */
 
   var api = {
@@ -378,10 +578,31 @@
     challengeUrl: challengeUrl,
     parseShare: parseShare,
     load: load,
-    save: save
+    save: save,
+    renderStats: renderStats,
+    buildQueue: buildQueue,
+    startGame: startGame,
+    nextQuestion: nextQuestion,
+    finishGame: finishGame,
+    backToStart: backToStart,
+    getGame: function () {
+      return game ? { index: game.index, score: game.score, total: game.total } : null;
+    },
+    getState: function () {
+      return state;
+    },
+    boot: boot
   };
 
   root.MenaTrivia = api;
+
+  if (hasDom() && typeof document.addEventListener === "function") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", boot);
+    } else {
+      boot();
+    }
+  }
 
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
